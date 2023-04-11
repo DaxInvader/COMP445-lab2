@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="Lab - 2 Dario CImmino" content="width=device-width, initial-scale=1.0">
+    <title>Live Video Feed - LAB2 - Dario Cimmino</title>
+    <style>
+        h1 {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>LAB - 2 Dario Cimmino</h1>
+    <button id="startButton">Start</button>
+    <button id="stopButton">Stop</button>
+    <video id="videoFeed" width="1280" height="720" autoplay></video>
+    <h1>LAST VIDEO ON SERVER</h1>
+    <video id="lastVideo" controls style="display:none;">
+        Your browser does not support the video tag.
+    </video>
+    <script type="module" src="live-feed2.js"></script>
+    <script>
+        const lastVideo = document.getElementById("lastVideo");
+
+        function loadLastVideo() {
+            fetch('http://localhost:3000/getlatestvideo')
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    }
+                    throw new Error('Failed to get latest video file');
+                });
+            lastVideo.innerHTML = `<source src="./output.mp4?${Date.now()}" type="video/mp4">`;
+            lastVideo.load();
+            lastVideo.style.display = "block";
+        }
+
+        window.addEventListener("load", () => {
+            loadLastVideo();
+        });
+
+        function onNewVideoUploaded() {
+            loadLastVideo();
+        }
+    </script>
+</body>
+
+</html>
