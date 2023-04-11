@@ -22,30 +22,6 @@
         Your browser does not support the video tag.
     </video>
     <script type="module" src="live-feed2.js"></script>
-    <script>
-        const lastVideo = document.getElementById("lastVideo");
-
-        function loadLastVideo() {
-            fetch('http://localhost:3000/getlatestvideo')
-                .then(response => {
-                    if (response.ok) {
-                        return response.text();
-                    }
-                    throw new Error('Failed to get latest video file');
-                });
-            lastVideo.innerHTML = `<source src="./output.mp4?${Date.now()}" type="video/mp4">`;
-            lastVideo.load();
-            lastVideo.style.display = "block";
-        }
-
-        window.addEventListener("load", () => {
-            loadLastVideo();
-        });
-
-        function onNewVideoUploaded() {
-            loadLastVideo();
-        }
-    </script>
 </body>
 
 </html>
