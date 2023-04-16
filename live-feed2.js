@@ -23,6 +23,7 @@ function init() {
 
     player = dashjs.MediaPlayer().create();
     player.initialize(videoPlayer, null, true);
+    player.attachView(document.getElementById('DASHVideoPlayer'));
 
     loadVideoList();
     videoListEl.addEventListener('click', async (event) => {
@@ -218,8 +219,7 @@ async function playSelectedVideo(videoId) {
         console.error('Could not find the video for the given videoId');
         return;
     }
-    console.log(videoId);
-    console.log(video);
+    console.log('Playing video:', videoId, video);
 
 
     if (player) {
@@ -231,12 +231,73 @@ async function playSelectedVideo(videoId) {
             console.log('Playlist response:', playlist);
 
             // Initialize player with playlist file
+            player.initialize(videoPlayer, playlist, true);
+
+            // Attach the source after initialization
             player.attachSource(playlist);
-            player.reset();
+            
+            console.log('Player element:', player.getVideoElement());
+
+            // Check if player is playing
+            console.log('Player is playing:', !player.isPaused());
+
+            // Read the playlist file and schedule retrieval of individual streamlets on-the-fly
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(playlist, 'application/xml');
+            const representations = xml.getElementsByTagName('Representation');
+
+            // Use the ABR algorithm to switch the rendering of one video streamlet to another
+            const switchToRepresentation = (index) => {
+                const targetRepresentation = representations[index];
+                const targetBandwidth = targetRepresentation.getAttribute('bandwidth');
+                console.log(`Switching to representation with bandwidth ${targetBandwidth}`);
+
+                // Use the DASH.js API to switch to the target representation
+                player.setQualityFor('video', 0, index);
+            };
+
+            // Schedule the retrieval of individual streamlets on-the-fly using the ABR algorithm
+            const segmentDuration = parseFloat(xml.getElementsByTagName('SegmentTemplate')[0].getAttribute('duration'));
+            let currentSegmentIndex = 0;
+            setInterval(() => {
+                const currentPlaybackTime = player.getVideoElement().currentTime;
+                const currentSegmentTime = currentSegmentIndex * segmentDuration;
+                if (currentPlaybackTime >= currentSegmentTime) {
+                    // Find the representation with the highest bandwidth that is less than or equal to the available bandwidth
+                    const availableBandwidth = player.getAverageThroughput('video');
+                    let bestIndex = 0;
+                    let bestBandwidth = -Infinity;
+                    for (let i = 0; i < representations.length; i++) {
+                        const representationBandwidth = parseInt(representations[i].getAttribute('bandwidth'));
+                        if (representationBandwidth > bestBandwidth && representationBandwidth <= availableBandwidth) {
+                            bestIndex = i;
+                            bestBandwidth = representationBandwidth;
+                        }
+                    }
+
+                    switchToRepresentation(bestIndex);
+                    currentSegmentIndex++;
+                }
+            }, 1000);
+
         } else {
             console.error('Error downloading playlist file:', response.statusText);
         }
     } else {
         console.error('MediaPlayer not initialized!');
     }
+}
+
+
+function parsePlaylist(playlist) {
+    const lines = playlist.split('\n');
+    const segments = [];
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.startsWith('SegmentURL=')) {
+            const segmentUrl = line.substring(11);
+            segments.push(segmentUrl);
+        }
+    }
+    return segments;
 }

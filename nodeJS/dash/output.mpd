@@ -5,9 +5,9 @@
 	xsi:schemaLocation="urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd"
 	profiles="urn:mpeg:dash:profile:isoff-live:2011"
 	type="static"
-	mediaPresentationDuration="PT6.3S"
+	mediaPresentationDuration="PT6.0S"
 	maxSegmentDuration="PT5.0S"
-	minBufferTime="PT12.6S">
+	minBufferTime="PT12.0S">
 	<ProgramInformation>
 	</ProgramInformation>
 	<ServiceDescription id="0">
@@ -17,28 +17,28 @@
 			<Representation id="0" mimeType="video/mp4" codecs="avc1.640015" bandwidth="700000" width="426" height="240" sar="640:639">
 				<SegmentTemplate timescale="15360" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
 					<SegmentTimeline>
-						<S t="0" d="96768" />
+						<S t="0" d="92160" />
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
 			<Representation id="2" mimeType="video/mp4" codecs="avc1.64001e" bandwidth="1000000" width="640" height="360" sar="1:1">
 				<SegmentTemplate timescale="15360" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
 					<SegmentTimeline>
-						<S t="0" d="96768" />
+						<S t="0" d="92160" />
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
 			<Representation id="4" mimeType="video/mp4" codecs="avc1.64001f" bandwidth="2000000" width="854" height="480" sar="1280:1281">
 				<SegmentTemplate timescale="15360" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
 					<SegmentTimeline>
-						<S t="0" d="96768" />
+						<S t="0" d="92160" />
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
 			<Representation id="6" mimeType="video/mp4" codecs="avc1.64001f" bandwidth="4000000" width="1280" height="720" sar="1:1">
 				<SegmentTemplate timescale="15360" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
 					<SegmentTimeline>
-						<S t="0" d="96768" />
+						<S t="0" d="92160" />
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
@@ -48,8 +48,8 @@
 				<AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="1" />
 				<SegmentTemplate timescale="48000" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
 					<SegmentTimeline>
-						<S t="0" d="239616" />
-						<S d="62784" />
+						<S t="0" d="239592" />
+						<S d="48384" />
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
@@ -57,8 +57,8 @@
 				<AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="1" />
 				<SegmentTemplate timescale="48000" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
 					<SegmentTimeline>
-						<S t="0" d="239616" />
-						<S d="62784" />
+						<S t="0" d="239592" />
+						<S d="48384" />
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
@@ -66,8 +66,8 @@
 				<AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="1" />
 				<SegmentTemplate timescale="48000" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
 					<SegmentTimeline>
-						<S t="0" d="239616" />
-						<S d="62784" />
+						<S t="0" d="239592" />
+						<S d="48384" />
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
@@ -75,8 +75,8 @@
 				<AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="1" />
 				<SegmentTemplate timescale="48000" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
 					<SegmentTimeline>
-						<S t="0" d="239616" />
-						<S d="62784" />
+						<S t="0" d="239592" />
+						<S d="48384" />
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>

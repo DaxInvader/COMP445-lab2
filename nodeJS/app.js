@@ -126,15 +126,14 @@ app.post('/uploadssh', (req, res) => {
             await sftp.mkdir(segmentFolder);
             await sftp.mkdir(dashFolder);
 
-            const localSegmentFolder = path.join(__dirname, 'uploads', dateString, 'segments');
-            const localDashFolder = path.join(__dirname, 'uploads', dateString, 'dash');
-            fs.mkdirSync(localSegmentFolder, { recursive: true });
-            fs.mkdirSync(localDashFolder, { recursive: true });
+            const localFolder = path.join(__dirname, 'uploads', dateString);
+
+            fs.mkdirSync(localFolder, { recursive: true });
 
             const segmentFiles = glob.sync('./segments/segment1.mp4');
             for (const file of segmentFiles) {
               const remoteFilePath = `${segmentFolder}/${file.replace('./segments/segment1', 'latest')}`;
-              const localFilePath = path.join(localSegmentFolder, path.basename(file));
+              const localFilePath = path.join(localFolder, path.basename(file));
               await sftp.fastPut(file, remoteFilePath);
               fs.copyFileSync(file, localFilePath);
               console.log(`File ${file} uploaded successfully`);
@@ -143,7 +142,7 @@ app.post('/uploadssh', (req, res) => {
             const dashFiles = glob.sync('./dash/*');
             for (const file of dashFiles) {
               const remoteFilePath = `${dashFolder}/${file.replace('./dash/', '')}`;
-              const localFilePath = path.join(localDashFolder, path.basename(file));
+              const localFilePath = path.join(localFolder, path.basename(file));
               await sftp.fastPut(file, remoteFilePath);
               fs.copyFileSync(file, localFilePath);
               console.log(`File ${file} uploaded successfully`);
@@ -199,7 +198,7 @@ app.get('/getvideoslist', async (req, res) => {
   
       for (const dir of directories) {
         if (dir.isDirectory()) {
-          const path = `uploads/${dir.name}/dash`;
+          const path = `uploads/${dir.name}`;
           const files = await fs.promises.readdir(path, { withFileTypes: true });
   
           // Find .mpd files and add to video list
@@ -231,6 +230,7 @@ app.get('/videos/:id/playlist.mpd', async (req, res) => {
   
     if (video) {
       const mpdFilePath = path.join(__dirname, video.location);
+      console.log(mpdFilePath);
   
       try {
         const mpdContent = await fs.promises.readFile(mpdFilePath, 'utf-8');
@@ -246,7 +246,7 @@ app.get('/videos/:id/playlist.mpd', async (req, res) => {
       res.status(404).send('Video not found');
     }
   });
-  
+
   function getVideoById(videoId) {
     return videoList.find((v) => v.id == videoId);
   }
