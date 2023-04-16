@@ -2,3 +2,5 @@ node_modules/
 nodeJS/node_modules
 segments/
 nodeJS/segments
+output/
+*.mp4

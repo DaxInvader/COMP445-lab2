@@ -1,0 +1,5 @@
+file 'dash/240p/output.mp4'
+file 'dash/360p/output.mp4'
+file 'dash/480p/output.mp4'
+file 'dash/720p/output.mp4'
+

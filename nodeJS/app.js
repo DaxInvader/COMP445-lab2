@@ -6,6 +6,17 @@ const app = express();
 const cors = require('cors');
 const { exec } = require('child_process');
 const path = require('path');
+const SftpClient = require('ssh2-sftp-client');
+const glob = require('glob');
+const shell = require('shelljs');
+
+
+const config = {
+    host: 'labs445-1.encs.concordia.ca',
+    port: 22,
+    username: 'team20',
+    password: 'password20'
+};
 
 app.use(cors());
 
@@ -31,7 +42,26 @@ app.post('/upload', upload.single('segment'), (req, res) => {
     segmentFilePaths.push(localMP4FilePath);
     console.log(segmentFilePaths);
 
-    res.send('ok');
+    const encodeffmpegcommand = `ffmpeg -i ${localMP4FilePath} -filter_complex "[0:v]split=4[v1][v2][v3][v4]; [v1]scale=w=426:h=240:force_original_aspect_ratio=decrease[240p]; [v2]scale=w=640:h=360:force_original_aspect_ratio=decrease[360p]; [v3]scale=w=854:h=480:force_original_aspect_ratio=increase,setsar=1,setdar=16/9[480p];[v4]scale=w=1280:h=720:force_original_aspect_ratio=decrease[720p]" -map [240p] -c:v:0 libx264 -b:v:0 700k -map 0:a -c:a:0 aac -b:a:0 64k -map [360p] -c:v:1 libx264 -b:v:1 1000k -map 0:a -c:a:1 aac -b:a:1 128k -map [480p] -c:v:2 libx264 -b:v:2 2000k -map 0:a -c:a:2 aac -b:a:2 128k -map [720p] -c:v:3 libx264 -b:v:3 4000k -map 0:a -c:a:3 aac -b:a:3 128k -f dash -min_seg_duration 4000 -use_template 1 -use_timeline 1 -adaptation_sets "id=0,streams=v id=1,streams=a" ./dash/output.mpd`;
+    try {
+        console.log("Executing FFmpeg command:", encodeffmpegcommand);
+        exec(encodeffmpegcommand, (error, stdout, stderr) => {
+
+            console.log('FFmpeg stdout:', stdout);
+            console.log('Video segments encoded successfully');
+
+        });
+    } catch (error) {
+        console.error('Error executing FFmpeg command:', error);
+        console.error('FFmpeg stderr:', stderr);
+        res.status(500).send(`Error executing FFmpeg command: ${error.message}`);
+
+    } finally {
+        res.send('ok');
+    }
+
+
+
 });
 
 app.post('/concatenate', (req, res) => {
@@ -77,6 +107,50 @@ app.post('/concatenate', (req, res) => {
     }
 });
 
+app.post('/uploadssh', (req, res) => {
+
+    const sftp = new SftpClient();
+
+    (async () => {
+        try {
+            await sftp.connect(config);
+    
+            const date = new Date();
+            const dateString = date.toISOString().slice(0, 19).replace(/-/g, "").replace(/:/g, "").replace("T", "_");
+            const remoteParentDir = `/home/team20/uploads/${dateString}`
+            const segmentFolder = `${remoteParentDir}/segments`;
+            const dashFolder = `${remoteParentDir}/dash`;
+            
+            await sftp.mkdir(remoteParentDir);
+            await sftp.mkdir(segmentFolder);
+            await sftp.mkdir(dashFolder);
+
+            const segmentFiles = glob.sync('./segments/segment1.mp4');
+            for (const file of segmentFiles) {
+              const remoteFilePath = `${segmentFolder}/${file.replace('./segments/segment1', 'latest')}`;
+              await sftp.fastPut(file, remoteFilePath);
+              console.log(`File ${file} uploaded successfully`);
+            }
+            
+            const dashFiles = glob.sync('./dash/*');
+            for (const file of dashFiles) {
+              const remoteFilePath = `${dashFolder}/${file.replace('./dash/', '')}`;
+              await sftp.fastPut(file, remoteFilePath);
+              console.log(`File ${file} uploaded successfully`);
+            }
+    
+            console.log('All files uploaded successfully');
+        } catch (error) {
+            console.error('Error uploading files:', error);
+            res.status(500).send(`Error uploading files: ${error.message}`);
+        } finally {
+            await sftp.end();
+        }
+    })();
+
+    res.send('ok');
+});
+
 
 app.get('/getlatestvideo', (req, res) => {
     var files = fs.readdirSync(path.join(__dirname, '../output'));
@@ -102,6 +176,59 @@ app.post('/clearsegments', (req, res) => {
         }
     });
 });
+
+
+app.get('/getvideoslist', async (req, res) => {
+    const sftp = new SftpClient();
+  
+    try {
+      // Connect to SSH server
+      await sftp.connect(config);
+  
+      // Get list of directories in /home/team20/uploads
+      const directories = await sftp.list('/home/team20/uploads');
+  
+      // Loop through directories and retrieve list of videos in each
+      const videoList = [];
+  
+      for (const dir of directories) {
+        const path = `/home/team20/uploads/${dir.name}/dash`;
+        const files = await sftp.list(path);
+  
+        // Find .mpd files and add to video list
+        for (const file of files) {
+          if (file.name.endsWith('.mpd')) {
+            videoList.push({
+              id: videoList.length + 1,
+              title: file.name.replace('.mpd', ''),
+              location: `${path}/${file.name}`,
+            });
+          }
+        }
+      }
+  
+      // Return video list as JSON
+      res.json(videoList);
+    } catch (error) {
+      console.error('Error retrieving video list:', error);
+      res.status(500).send(`Error retrieving video list: ${error.message}`);
+    } finally {
+      await sftp.end();
+    }
+  });
+  
+
+  // Server-side endpoint to serve playlist file for selected video
+app.get('/videos/:id/playlist.mpd', (req, res) => {
+    const videoId = req.params.id;
+  
+    // Generate playlist file for video with given ID
+    const playlist = generatePlaylist(videoId);
+  
+    // Serve playlist file as XML
+    res.set('Content-Type', 'application/xml');
+    res.send(playlist);
+  });
 
 app.listen(3000, () => {
     console.log('Server listening on port 3000');
