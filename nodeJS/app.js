@@ -33,6 +33,7 @@ const upload = multer({ storage: storage });
 
 // Array to hold the individual video segment file paths
 let segmentFilePaths = [];
+let videoList = [];
 
 // Handle individual video segment uploads
 app.post('/upload', upload.single('segment'), (req, res) => {
@@ -117,7 +118,7 @@ app.post('/uploadssh', (req, res) => {
     
             const date = new Date();
             const dateString = date.toISOString().slice(0, 19).replace(/-/g, "").replace(/:/g, "").replace("T", "_");
-            const remoteParentDir = `/home/team20/uploads/${dateString}`
+            const remoteParentDir = `/home/team20/uploads/${dateString}`;
             const segmentFolder = `${remoteParentDir}/segments`;
             const dashFolder = `${remoteParentDir}/dash`;
             
@@ -125,17 +126,26 @@ app.post('/uploadssh', (req, res) => {
             await sftp.mkdir(segmentFolder);
             await sftp.mkdir(dashFolder);
 
+            const localSegmentFolder = path.join(__dirname, 'uploads', dateString, 'segments');
+            const localDashFolder = path.join(__dirname, 'uploads', dateString, 'dash');
+            fs.mkdirSync(localSegmentFolder, { recursive: true });
+            fs.mkdirSync(localDashFolder, { recursive: true });
+
             const segmentFiles = glob.sync('./segments/segment1.mp4');
             for (const file of segmentFiles) {
               const remoteFilePath = `${segmentFolder}/${file.replace('./segments/segment1', 'latest')}`;
+              const localFilePath = path.join(localSegmentFolder, path.basename(file));
               await sftp.fastPut(file, remoteFilePath);
+              fs.copyFileSync(file, localFilePath);
               console.log(`File ${file} uploaded successfully`);
             }
             
             const dashFiles = glob.sync('./dash/*');
             for (const file of dashFiles) {
               const remoteFilePath = `${dashFolder}/${file.replace('./dash/', '')}`;
+              const localFilePath = path.join(localDashFolder, path.basename(file));
               await sftp.fastPut(file, remoteFilePath);
+              fs.copyFileSync(file, localFilePath);
               console.log(`File ${file} uploaded successfully`);
             }
     
@@ -179,30 +189,28 @@ app.post('/clearsegments', (req, res) => {
 
 
 app.get('/getvideoslist', async (req, res) => {
-    const sftp = new SftpClient();
+    const directoryPath = path.join(__dirname, 'uploads');
+    // Clear the videoList array before repopulating it
+    videoList = [];
   
     try {
-      // Connect to SSH server
-      await sftp.connect(config);
-  
-      // Get list of directories in /home/team20/uploads
-      const directories = await sftp.list('/home/team20/uploads');
-  
-      // Loop through directories and retrieve list of videos in each
-      const videoList = [];
+      // Get list of directories in /uploads
+      const directories = await fs.promises.readdir(directoryPath, { withFileTypes: true });
   
       for (const dir of directories) {
-        const path = `/home/team20/uploads/${dir.name}/dash`;
-        const files = await sftp.list(path);
+        if (dir.isDirectory()) {
+          const path = `uploads/${dir.name}/dash`;
+          const files = await fs.promises.readdir(path, { withFileTypes: true });
   
-        // Find .mpd files and add to video list
-        for (const file of files) {
-          if (file.name.endsWith('.mpd')) {
-            videoList.push({
-              id: videoList.length + 1,
-              title: file.name.replace('.mpd', ''),
-              location: `${path}/${file.name}`,
-            });
+          // Find .mpd files and add to video list
+          for (const file of files) {
+            if (file.isFile() && file.name.endsWith('.mpd')) {
+              videoList.push({
+                id: videoList.length + 1,
+                title: file.name.replace('.mpd', ''),
+                location: `${path}/${file.name}`,
+              });
+            }
           }
         }
       }
@@ -212,23 +220,36 @@ app.get('/getvideoslist', async (req, res) => {
     } catch (error) {
       console.error('Error retrieving video list:', error);
       res.status(500).send(`Error retrieving video list: ${error.message}`);
-    } finally {
-      await sftp.end();
     }
   });
   
 
-  // Server-side endpoint to serve playlist file for selected video
-app.get('/videos/:id/playlist.mpd', (req, res) => {
+// Server-side endpoint to serve playlist file for selected video
+app.get('/videos/:id/playlist.mpd', async (req, res) => {
     const videoId = req.params.id;
+    const video = getVideoById(videoId);
   
-    // Generate playlist file for video with given ID
-    const playlist = generatePlaylist(videoId);
+    if (video) {
+      const mpdFilePath = path.join(__dirname, video.location);
   
-    // Serve playlist file as XML
-    res.set('Content-Type', 'application/xml');
-    res.send(playlist);
+      try {
+        const mpdContent = await fs.promises.readFile(mpdFilePath, 'utf-8');
+  
+        // Serve playlist file as XML
+        res.set('Content-Type', 'application/xml');
+        res.send(mpdContent);
+      } catch (error) {
+        console.error('Error retrieving mpd file:', error);
+        res.status(500).send(`Error retrieving mpd file: ${error.message}`);
+      }
+    } else {
+      res.status(404).send('Video not found');
+    }
   });
+  
+  function getVideoById(videoId) {
+    return videoList.find((v) => v.id == videoId);
+  }
 
 app.listen(3000, () => {
     console.log('Server listening on port 3000');
