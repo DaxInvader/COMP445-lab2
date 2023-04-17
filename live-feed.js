@@ -157,11 +157,11 @@ async function loadVideoList() {
   const response = await fetch('http://localhost:3000/getvideoslist');
   videoList = await response.json(); // Update videoList here
 
-  videoList.forEach((video) => {
+  videoList.forEach((v) => {
     const videoEl = document.createElement('div');
     videoEl.innerHTML = `
         <h3>${video.title}</h3>
-        <button data-id="${video.id}">Watch</button>
+        <button data-id="${v.id}">Watch</button>
         `;
     videoListEl.appendChild(videoEl);
   });
@@ -182,15 +182,15 @@ function generatePlaylist(videoId) {
 }
 
 async function playSelectedVideo(videoId) {
-  const video = videoList.find((v) => v.id === videoId);
+  const v = videoList.find((v) => v.id === videoId);
 
-  if (!video) {
+  if (!v) {
     console.error('Could not find the video for the given videoId');
     return;
   }
 
   console.log(videoId);
-  console.log(video);
+  console.log(v);
 
   if (player) {
     // Download playlist file for selected video
