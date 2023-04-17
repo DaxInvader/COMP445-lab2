@@ -96,16 +96,6 @@ async function mediaReceiverOnDataAvailable(event) {
   segmentNumber += 1;
 }
 
-function mediaReceiverOnStop() {
-  setTimeout(async () => {
-    if (uploadCounter === 0) {
-      const filename = await concatenate();
-      const success = await uploadssh();
-      return updateLatestVideo(filename);
-    }
-  }, 1000);
-}
-
 async function updateLatestVideo(filename) {
   console.log('setting latest video', filename);
 
@@ -209,6 +199,16 @@ async function playSelectedVideo(videoId) {
   } else {
     console.error('MediaPlayer not initialized!');
   }
+}
+
+function mediaReceiverOnStop() {
+  setTimeout(async () => {
+    if (uploadCounter === 0) {
+      const filename = await concatenate();
+      const success = await uploadssh();
+      return updateLatestVideo(filename);
+    }
+  }, 1000);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
