@@ -24,7 +24,6 @@ function clearSegments() {
 }
 
 async function mediaReceiverOnDataAvailable(event) {
-  console.log('here');
   const blob = new Blob([event.data], { type: 'video/mp4' });
   const formData = new FormData();
   formData.append('segment', blob, `segment${segmentNumber}.mp4`);
