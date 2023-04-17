@@ -159,17 +159,10 @@ async function playSelectedVideo(videoId) {
 }
 
 function mediaReceiverOnStop() {
-  setTimeout(() => {
-    if (uploadCounter !== 0) {
-      return null;
-    }
-
-    return concatenate()
-      .then(
-        (filename) => uploadssh()
-          .then(() => updateLatestVideo(filename)),
-      );
-  }, 1000);
+  setTimeout(
+    () => getLatestVideo()
+      .then((filename) => updateLatestVideo(filename)),
+  );
 }
 
 function createStream() {

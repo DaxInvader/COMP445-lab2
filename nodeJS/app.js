@@ -44,7 +44,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Array to hold the individual video segment file paths
-let segmentFilePaths = [];
+const segmentFilePaths = [];
 let videoList = [];
 
 function getVideoById(videoId) {
@@ -75,50 +75,10 @@ app.post('/upload', upload.single('segment'), (req, res) => {
   }
 });
 
-app.post('/concatenate', (_, res) => {
-  // Concatenate the individual segments using FFmpeg
-  try {
-    const concatenateCommand = `ffmpeg -y -i "concat:${segmentFilePaths.join('|')}" -c copy output.mp4`;
-    console.log('Executing FFmpeg command:', concatenateCommand);
-    exec(concatenateCommand, (error, stdout, stderr) => {
-      if (error) {
-        console.error('Error executing FFmpeg command:', error);
-        console.error('FFmpeg stderr:', stderr);
-        res.status(500).send(`Error executing FFmpeg command: ${error.message}`);
-        return;
-      }
-
-      console.log('FFmpeg stdout:', stdout);
-      console.log('Video segments concatenated successfully');
-
-      // Clean up the individual segment files
-      segmentFilePaths.forEach((filePath) => {
-        fs.unlinkSync(filePath);
-      });
-
-      const timestamp = Date.now();
-      const oldFilePath = './output.mp4';
-      const filename = `${timestamp}_output.mp4`;
-      const newFilePath = `${appDirs.output}/${filename}`;
-
-      fs.rename(oldFilePath, newFilePath, (err) => {
-        if (err) {
-          console.error('Error renaming output file:', err);
-          res.status(500).json({ success: false, error: err.message });
-        }
-      });
-
-      res.json({ filename });
-    });
-  } catch (error) {
-    console.error('Error during concatenation:', error);
-    res.status(500).json({ success: false, error: error.message });
-  } finally {
-    segmentFilePaths = [];
-  }
-});
-
 app.post('/uploadssh', (_, res) => {
+  res.send('ok');
+  return;
+
   const sftp = new SftpClient();
 
   (async () => {
