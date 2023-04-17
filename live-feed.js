@@ -8,7 +8,7 @@ let player;
 
 let mediaRecorder;
 let segmentNumber = 1;
-let chunks = [];
+// let chunks = [];
 let uploadCounter = 0;
 let videoList = [];
 
@@ -20,52 +20,11 @@ function clearSegments() {
   })
     .then((response) => response.text())
     .then((response) => console.log(`Clear segments result: ${response}`))
-    .catch((error) => (!response.ok) && console.error(`Error clear segments: HTTP error! status: ${response.status}`));
-}
-
-function createStream() {
-  return navigator.mediaDevices.getUserMedia({
-    video: {
-      width: 1280,
-      height: 720,
-      frameRate: { ideal: 30, max: 30 },
-    },
-    audio: true,
-  });
-}
-
-function createMediaRecorder(stream) {
-  const mr = new MediaRecorder(stream, { mimeType: 'video/webm' });
-  mr.ondataavailable = mediaReceiverOnDataAvailable;
-  mr.onstop = mediaReceiverOnStop;
-
-  return mr;
-}
-
-async function start() {
-  await clearSegments();
-
-  const stream = await createStream();
-  video.srcObject = stream;
-
-  mediaRecorder = await createMediaRecorder(stream);
-  mediaRecorder.start();
-}
-
-function stop() {
-  if (mediaRecorder) {
-    mediaRecorder.stop();
-    chunks = [];
-  }
-
-  if (video.srcObject) {
-    const tracks = video.srcObject.getTracks();
-    tracks.forEach((track) => track.stop());
-    video.srcObject = null;
-  }
+    .catch((error) => console.error(`Error clear segments: ${error}`));
 }
 
 async function mediaReceiverOnDataAvailable(event) {
+  console.log('here');
   const blob = new Blob([event.data], { type: 'video/mp4' });
   const formData = new FormData();
   formData.append('segment', blob, `segment${segmentNumber}.mp4`);
@@ -141,7 +100,6 @@ function uploadssh() {
 
 // Client-side code to retrieve video list and download playlist file
 async function loadVideoList() {
-  // Clear video list before appending new elements
   videoListEl.innerHTML = '';
 
   const response = await fetch('http://localhost:3000/getvideoslist');
@@ -157,22 +115,22 @@ async function loadVideoList() {
   });
 }
 
-async function loadVideo(videoId) {
-  // Download playlist file for selected video
-  const response = await fetch(`http://localhost:3000/videos/${videoId}/playlist.mpd`);
-  const playlist = await response.text();
-
-  // Initialize player with playlist file
-  player.attachSource(playlist);
-}
+// async function loadVideo(videoId) {
+//   // Download playlist file for selected video
+//   const response = await fetch(`http://localhost:3000/videos/${videoId}/playlist.mpd`);
+//   const playlist = await response.text();
+//
+//   // Initialize player with playlist file
+//   player.attachSource(playlist);
+// }
 
 // Find the video with the matching ID
-function generatePlaylist(videoId) {
-  return videoList.find((v) => v.id === videoId)?.location;
-}
+// function generatePlaylist(videoId) {
+//   return videoList.find((v) => v.id === videoId)?.location;
+// }
 
 async function playSelectedVideo(videoId) {
-  const v = videoList.find((v) => v.id === videoId);
+  const v = videoList.find((vid) => vid.id === videoId);
 
   if (!v) {
     console.error('Could not find the video for the given videoId');
@@ -202,13 +160,59 @@ async function playSelectedVideo(videoId) {
 }
 
 function mediaReceiverOnStop() {
-  setTimeout(async () => {
-    if (uploadCounter === 0) {
-      const filename = await concatenate();
-      const success = await uploadssh();
-      return updateLatestVideo(filename);
+  setTimeout(() => {
+    if (uploadCounter !== 0) {
+      return null;
     }
+
+    return concatenate()
+      .then(
+        (filename) => uploadssh()
+          .then(() => updateLatestVideo(filename)),
+      );
   }, 1000);
+}
+
+function createStream() {
+  return navigator.mediaDevices.getUserMedia({
+    video: {
+      width: 1280,
+      height: 720,
+      frameRate: { ideal: 30, max: 30 },
+    },
+    audio: true,
+  });
+}
+
+function createMediaRecorder(stream) {
+  const mr = new MediaRecorder(stream, { mimeType: 'video/webm' });
+  mr.ondataavailable = mediaReceiverOnDataAvailable;
+  mr.onstop = mediaReceiverOnStop;
+
+  return mr;
+}
+
+async function start() {
+  await clearSegments();
+
+  const stream = await createStream();
+  video.srcObject = stream;
+
+  mediaRecorder = createMediaRecorder(stream);
+  mediaRecorder.start();
+}
+
+function stop() {
+  if (mediaRecorder) {
+    mediaRecorder.stop();
+    // chunks = [];
+  }
+
+  if (video.srcObject) {
+    const tracks = video.srcObject.getTracks();
+    tracks.forEach((track) => track.stop());
+    video.srcObject = null;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
