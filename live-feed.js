@@ -12,26 +12,15 @@ let chunks = [];
 let uploadCounter = 0;
 let videoList = [];
 
-document.addEventListener('DOMContentLoaded', () => init());
-
-function init() {
-  window.addEventListener('load', async () => {
-    const filename = await getLatestVideo();
-    updateLatestVideo(filename);
-  });
-
-  player = dashjs.MediaPlayer().create();
-  player.initialize(videoPlayer, null, true);
-
-  loadVideoList();
-  videoListEl.addEventListener('click', async (event) => {
-    if (event.target.tagName === 'BUTTON') {
-      const videoId = event.target.dataset.id;
-      await playSelectedVideo(videoId);
-    }
-  });
-  startButton.addEventListener('click', start);
-  stopButton.addEventListener('click', stop);
+function clearSegments() {
+  return fetch('http://localhost:3000/clearsegments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  })
+    .then((response) => response.text())
+    .then((response) => console.log(`Clear segments result: ${response}`))
+    .catch((error) => (!response.ok) && console.error(`Error clear segments: HTTP error! status: ${response.status}`));
 }
 
 function createStream() {
@@ -82,7 +71,7 @@ async function mediaReceiverOnDataAvailable(event) {
   formData.append('segment', blob, `segment${segmentNumber}.mp4`);
 
   // Increment the upload counter
-  uploadCounter++;
+  uploadCounter += 1;
 
   // When a new video segment is ready
   await Promise.all([
@@ -90,11 +79,11 @@ async function mediaReceiverOnDataAvailable(event) {
       .then((response) => response.text())
       .then((response) => {
         console.log(`Upload result to NodeJS: ${response}`);
-        uploadCounter--;
+        uploadCounter -= 1;
       })
       .catch((error) => {
         console.error(`Error uploading video segment to NodeJS: ${error}`);
-        uploadCounter--;
+        uploadCounter -= 1;
       }),
 
     fetch('upload.php', { method: 'POST', body: formData })
@@ -104,7 +93,7 @@ async function mediaReceiverOnDataAvailable(event) {
   ])
     .catch((error) => console.error(error));
 
-  segmentNumber++;
+  segmentNumber += 1;
 }
 
 function mediaReceiverOnStop() {
@@ -160,17 +149,6 @@ function uploadssh() {
     .catch((error) => console.error(`Error uploadssh: ${error}`));
 }
 
-function clearSegments() {
-  return fetch('http://localhost:3000/clearsegments', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
-  })
-    .then((response) => response.text())
-    .then((response) => console.log(`Clear segments result: ${response}`))
-    .catch((error) => (!response.ok) && console.error(`Error clear segments: HTTP error! status: ${response.status}`));
-}
-
 // Client-side code to retrieve video list and download playlist file
 async function loadVideoList() {
   // Clear video list before appending new elements
@@ -198,20 +176,19 @@ async function loadVideo(videoId) {
   player.attachSource(playlist);
 }
 
+// Find the video with the matching ID
 function generatePlaylist(videoId) {
-  // Find the video with the matching ID
-  const video = videoList.find((v) => v.id == videoId);
-  if (video) {
-    return video.location; // Return the playlist location instead of the entire video object
-  }
-  return null;
+  return videoList.find((v) => v.id === videoId)?.location;
 }
+
 async function playSelectedVideo(videoId) {
-  const video = videoList.find((v) => v.id == videoId);
+  const video = videoList.find((v) => v.id === videoId);
+
   if (!video) {
     console.error('Could not find the video for the given videoId');
     return;
   }
+
   console.log(videoId);
   console.log(video);
 
@@ -233,3 +210,25 @@ async function playSelectedVideo(videoId) {
     console.error('MediaPlayer not initialized!');
   }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('load', async () => {
+    const filename = await getLatestVideo();
+    updateLatestVideo(filename);
+  });
+
+  player = window.dashjs.MediaPlayer().create();
+  player.initialize(videoPlayer, null, true);
+
+  loadVideoList();
+
+  videoListEl.addEventListener('click', async (event) => {
+    if (event.target.tagName === 'BUTTON') {
+      const videoId = event.target.dataset.id;
+      await playSelectedVideo(videoId);
+    }
+  });
+
+  startButton.addEventListener('click', start);
+  stopButton.addEventListener('click', stop);
+});
