@@ -1,0 +1,5 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteRule ^output/(.*) /nodeJS/uploads/$1 [L]
+</IfModule>
