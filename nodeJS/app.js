@@ -12,11 +12,13 @@ const glob = require('glob');
 const appDirs = {
   segments: './segments',
   output: '../output',
+  uploads: './uploads',
 };
 
 Object.values(appDirs).forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir);
+  const p = path.resolve(__dirname, dir);
+  if (!fs.existsSync(p)) {
+    fs.mkdirSync(p);
   }
 });
 
