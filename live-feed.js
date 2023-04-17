@@ -38,18 +38,22 @@ function mediaReceiverOnDataAvailable(event) {
     .catch((error) => console.error(error));
 }
 
-async function updateLatestVideo(filename) {
-  console.log('setting latest video', filename);
-}
+function populateQualitySelector() {
+  const qualitySelector = document.getElementById('qualitySelector');
+  const bitrates = player.getBitrateInfoListFor('video');
 
-function getLatestVideo() {
-  return fetch('http://localhost:3000/getlatestvideo', { method: 'GET' })
-    .then((response) => response.text())
-    .then((response) => {
-      const { filename } = JSON.parse(response);
-      return filename;
-    })
-    .catch((error) => console.error('Error downloading latest video segment:', error));
+  // Clear the quality selector
+  qualitySelector.innerHTML = '';
+
+  bitrates.forEach((bitrate, index) => {
+    const option = document.createElement('option');
+    option.value = index;
+    option.text = `${bitrate.width}x${bitrate.height} - ${(bitrate.bitrate / 1000).toFixed(0)} kbps`;
+    qualitySelector.add(option);
+  });
+
+  // Set the current selected quality
+  qualitySelector.selectedIndex = player.getQualityFor('video');
 }
 
 async function playSelectedVideo(timestamp) {
@@ -60,6 +64,9 @@ async function playSelectedVideo(timestamp) {
   player.reset();
   player.attachView(videoPlayer);
   player.attachSource(`/output/${timestamp}/output.mpd`);
+
+  // Populate the quality selector with the available video qualities
+  setTimeout(populateQualitySelector, 1000);
 }
 
 // Client-side code to retrieve video list and download playlist file
@@ -87,13 +94,10 @@ async function loadVideoList() {
 }
 
 function mediaReceiverOnStop() {
+  loadVideoList();
   // TODO: load video list
   // TODO: ecrase ta list first
   // TODO: set latest video (ton dernier timestamp) (playselectedvideo)
-  setTimeout(
-    () => getLatestVideo()
-      .then((filename) => updateLatestVideo(filename)),
-  );
 }
 
 function createStream() {
@@ -137,17 +141,43 @@ function stop() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.addEventListener('load', async () => {
-    const filename = await getLatestVideo();
-    updateLatestVideo(filename);
+function onQualityChange() {
+  const qualitySelector = document.getElementById('qualitySelector');
+  const selectedQualityIndex = qualitySelector.selectedIndex;
+
+  // Temporarily disable ABR auto switching
+  player.updateSettings({
+    streaming: {
+      abr: {
+        autoSwitchBitrate: {
+          video: false,
+        },
+      },
+    },
   });
 
+  // Set the selected quality
+  player.setQualityFor('video', selectedQualityIndex);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
   player = window.dashjs.MediaPlayer().create();
   player.initialize(videoPlayer, null, true);
 
+  // Enable ABR algorithm
+  player.updateSettings({
+    streaming: {
+      abr: {
+        autoSwitchBitrate: {
+          video: true,
+        },
+      },
+    },
+  });
   startButton.addEventListener('click', start);
   stopButton.addEventListener('click', stop);
+  const qualitySelector = document.getElementById('qualitySelector');
+  qualitySelector.addEventListener('change', onQualityChange);
 
   return loadVideoList();
 });

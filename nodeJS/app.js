@@ -160,13 +160,6 @@ app.post('/upload', upload.single('segment'), async (req, res) => {
   }
 });
 
-app.get('/getlatestvideo', (_, res) => {
-  const files = fs.readdirSync(path.join(__dirname, '../output'));
-  files.sort((a, b) => parseInt(b.split('_')[0], 10) - parseInt(a.split('_')[0], 10));
-
-  res.json({ filename: files?.[0] });
-});
-
 app.post('/clearsegments', (_, res) => {
   fs.readdir('./segments', (err, files) => {
     if (err) {
